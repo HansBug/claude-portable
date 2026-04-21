@@ -1,5 +1,7 @@
 # Claude Code Portable
 
+*[English](README.md) · 中文*
+
 > [Claude Code](https://claude.ai/code) 的便携打包版本——解压即用，无需安装。
 
 [Claude Code](https://claude.ai/code) 是 Anthropic 官方 CLI 工具。本仓库自动将官方二进制文件重新打包为自包含归档，适合在**无网络或仅代理上网的服务器**上部署，无需包管理器，无需联网安装。

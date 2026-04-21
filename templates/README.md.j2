@@ -1,5 +1,7 @@
 # Claude Code Portable
 
+*English · [中文](README_zh.md)*
+
 > Portable packaging of [Claude Code](https://claude.ai/code) — extract and run, no installation required.
 
 [Claude Code](https://claude.ai/code) is Anthropic's official CLI. This repository automatically repackages the official binary into self-contained archives for deployment on **air-gapped or proxy-only servers** where package managers and internet access are unavailable.
