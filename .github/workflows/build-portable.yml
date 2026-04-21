@@ -1,0 +1,236 @@
+name: Build Portable
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.1.116)'
+        required: true
+        type: string
+      publish_to_release:
+        description: 'Upload artifacts to the GitHub Release'
+        required: false
+        default: 'true'
+        type: string
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner:   ubuntu-22.04
+            archive:  tar.gz
+          - platform: linux-arm64
+            runner:   ubuntu-22.04-arm
+            archive:  tar.gz
+          - platform: linux-x64-musl
+            runner:   ubuntu-22.04
+            archive:  tar.gz
+          - platform: linux-arm64-musl
+            runner:   ubuntu-22.04-arm
+            archive:  tar.gz
+          - platform: darwin-arm64
+            runner:   macos-15
+            archive:  tar.gz
+          - platform: darwin-x64
+            runner:   macos-13
+            archive:  tar.gz
+          - platform: win32-x64
+            runner:   windows-2022
+            archive:  zip
+          - platform: win32-arm64
+            runner:   windows-11-arm
+            archive:  zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: Build portable package
+        shell: bash
+        run: |
+          node scripts/build-portable.mjs \
+            --version  "${{ steps.version.outputs.version }}" \
+            --platform "${{ matrix.platform }}" \
+            --output   dist
+
+      # ── Smoke tests ────────────────────────────────────────────────────────
+      - name: Smoke test — musl (via Docker / Alpine)
+        if: contains(matrix.platform, 'musl')
+        shell: bash
+        run: |
+          BUNDLE_DIR=$(ls -d dist/claude-portable-${{ matrix.platform }}-*/ | head -1)
+          ABS_BUNDLE="$(pwd)/$BUNDLE_DIR"
+          echo "Testing musl binary in Alpine container..."
+          docker run --rm \
+            -v "$ABS_BUNDLE:/bundle:ro" \
+            -e DISABLE_AUTOUPDATER=1 \
+            alpine:3.19 \
+            sh -c 'apk add --no-cache libgcc libstdc++ > /dev/null 2>&1 && /bundle/claude --version'
+          echo "✓ --version passed (Alpine)"
+
+          echo "Testing API connectivity..."
+          docker run --rm \
+            -v "$ABS_BUNDLE:/bundle:ro" \
+            -e DISABLE_AUTOUPDATER=1 \
+            -e ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
+            -e HTTPS_PROXY="${HTTPS_PROXY:-}" \
+            -e HTTP_PROXY="${HTTP_PROXY:-}" \
+            -e NO_PROXY="${NO_PROXY:-}" \
+            alpine:3.19 \
+            sh -c 'apk add --no-cache libgcc libstdc++ > /dev/null 2>&1 && /bundle/claude -p "Reply with exactly the text: SMOKE_TEST_OK" 2>&1 | grep -q "SMOKE_TEST_OK"'
+          echo "✓ API test passed (Alpine)"
+
+      - name: Smoke test — Linux / macOS (native)
+        if: "!contains(matrix.platform, 'musl') && !contains(matrix.platform, 'win32')"
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISABLE_AUTOUPDATER: '1'
+        run: |
+          BUNDLE_DIR=$(ls -d dist/claude-portable-${{ matrix.platform }}-*/ | head -1)
+          echo "Testing ${{ matrix.platform }} binary..."
+
+          "$BUNDLE_DIR/claude" --version
+          echo "✓ --version passed"
+
+          "$BUNDLE_DIR/claude" -p "Reply with exactly the text: SMOKE_TEST_OK" 2>&1 \
+            | grep -q "SMOKE_TEST_OK"
+          echo "✓ API test passed"
+
+      - name: Smoke test — Windows
+        if: contains(matrix.platform, 'win32')
+        shell: pwsh
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISABLE_AUTOUPDATER: '1'
+        run: |
+          $BundleDir = (Get-ChildItem dist -Directory -Filter "claude-portable-${{ matrix.platform }}-*" | Select-Object -First 1).FullName
+          Write-Host "Testing ${{ matrix.platform }} binary at $BundleDir ..."
+
+          & "$BundleDir\claude.cmd" --version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Write-Host "✓ --version passed"
+
+          $out = & "$BundleDir\claude.cmd" -p "Reply with exactly the text: SMOKE_TEST_OK" 2>&1
+          if ($out -notmatch "SMOKE_TEST_OK") {
+            Write-Error "API smoke test failed. Output: $out"
+            exit 1
+          }
+          Write-Host "✓ API test passed"
+
+      # ── Checksum ───────────────────────────────────────────────────────────
+      - name: Compute SHA256
+        shell: bash
+        run: |
+          cd dist
+          for f in claude-portable-${{ matrix.platform }}-*.${{ matrix.archive }}; do
+            if command -v sha256sum &>/dev/null; then
+              sha256sum "$f" > "$f.sha256"
+            else
+              shasum -a 256 "$f" > "$f.sha256"
+            fi
+            echo "$(cat "$f.sha256")"
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-portable-${{ matrix.platform }}
+          path: |
+            dist/claude-portable-${{ matrix.platform }}-*.${{ matrix.archive }}
+            dist/claude-portable-${{ matrix.platform }}-*.sha256
+          retention-days: 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  publish:
+    name: Publish & Update README
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || inputs.publish_to_release == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+        run: |
+          find artifacts/ -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.sha256" \) \
+            | xargs gh release upload "${{ steps.tag.outputs.tag }}" \
+                --clobber \
+                --repo "${{ github.repository }}"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Jinja2
+        run: pip install jinja2
+
+      - name: Regenerate README
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+        run: |
+          gh release view "${{ steps.tag.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --json tagName,name,publishedAt,url,assets \
+            > /tmp/release.json
+
+          python3 scripts/render-readme.py \
+            --release    /tmp/release.json \
+            --repo       "${{ github.repository }}" \
+            --output-en  README.md \
+            --output-zh  README_zh.md
+
+      - name: Commit README
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md README_zh.md
+          if git diff --staged --quiet; then
+            echo "README unchanged — nothing to commit."
+          else
+            git commit -m "docs: update README for ${{ steps.tag.outputs.tag }} [skip ci]"
+            git push
+          fi

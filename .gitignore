@@ -1,0 +1,6 @@
+.work/
+dist/
+node_modules/
+*.tar.gz
+*.zip
+*.sha256

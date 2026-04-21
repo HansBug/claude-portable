@@ -1,0 +1,111 @@
+# Claude Code Portable
+
+> Portable packaging of [Claude Code](https://claude.ai/code) — extract and run, no installation required.
+
+[Claude Code](https://claude.ai/code) is Anthropic's official CLI. This repository automatically repackages the official binary into self-contained archives for deployment on **air-gapped or proxy-only servers** where package managers and internet access are unavailable.
+
+**Current release: [{{ tag }}]({{ release_url }})** · [All releases]({{ releases_url }})
+
+## Download
+
+| Platform | File | SHA256 |
+|----------|------|--------|
+{% for p in platforms -%}
+| {{ p.label }}<br><small>{{ p.note }}</small> | [{{ p.filename }}]({{ p.url }}) | [checksum]({{ p.sha256_url }}) |
+{% endfor %}
+
+## Quick Install
+
+### Linux / macOS — one-liner
+
+```bash
+# Linux x86-64 (glibc) — change the filename for your platform
+curl -fSLO {{ linux_x64.url }}
+tar xzf {{ linux_x64.filename }}
+cd {{ linux_x64.filename[:-7] }}   # strip .tar.gz
+./claude --version
+```
+
+Move to `~/.local/bin` for a permanent install:
+
+```bash
+mkdir -p ~/.local/bin
+cp claude bin/claude-real ~/.local/bin/  # copy both launcher and real binary
+# Or keep the whole directory and symlink the launcher:
+ln -sf "$PWD/claude" ~/.local/bin/claude
+```
+
+### Windows — PowerShell
+
+```powershell
+Invoke-WebRequest -Uri "{{ win32_x64.url }}" -OutFile "{{ win32_x64.filename }}"
+Expand-Archive "{{ win32_x64.filename }}" .
+.\{{ win32_x64.filename[:-4] }}\claude.cmd --version
+```
+
+## Configuration
+
+### API Key
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+claude "Hello"
+```
+
+### Proxy (HTTP / HTTPS)
+
+The launcher passes all proxy environment variables through to Claude Code:
+
+```bash
+export HTTPS_PROXY=http://proxy.corp.example.com:8080
+export HTTP_PROXY=http://proxy.corp.example.com:8080
+export NO_PROXY=localhost,127.0.0.1,10.0.0.0/8
+
+# Corporate CA cert (if your proxy does TLS inspection)
+export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/corp-ca.pem
+
+claude --version
+```
+
+### Custom API Endpoint
+
+```bash
+# Route through an internal LLM gateway instead of api.anthropic.com
+export ANTHROPIC_BASE_URL=https://your-internal-gateway/
+```
+
+## Supported Platforms
+
+| Platform | Notes |
+|----------|-------|
+{% for p in platforms -%}
+| **{{ p.label }}** | {{ p.note }} |
+{% endfor %}
+
+> **`DISABLE_AUTOUPDATER=1`** is injected automatically by the launcher script.
+> The binary will never attempt to download updates, making it safe for air-gapped environments.
+
+## Bundle Layout
+
+```
+claude-portable-<platform>-v{{ version }}/
+├── claude          ← launcher (sets DISABLE_AUTOUPDATER=1, then execs the real binary)
+├── bin/
+│   └── claude-real ← the official Anthropic binary (~227 MB, self-contained)
+└── portable-metadata.json
+```
+
+On Windows: `claude.cmd` (CMD) and `claude.ps1` (PowerShell) replace the Unix `claude` launcher.
+
+## How It Works
+
+1. GitHub Actions polls npm every 3 hours for a new `@anthropic-ai/claude-code` release.
+2. When a new version is found, release notes are generated with Claude (claude-opus-4-7) and a GitHub Release is created.
+3. Eight parallel build jobs extract the official binary for each platform, wrap it with a launcher script, and package the result.
+4. Smoke tests run on every platform before artifacts are published.
+5. This README is regenerated automatically from the release metadata.
+
+## License
+
+The Claude Code binary is distributed by Anthropic under their [Terms of Service](https://www.anthropic.com/legal/consumer-terms).
+The launcher scripts and packaging tooling in this repository are MIT licensed.
