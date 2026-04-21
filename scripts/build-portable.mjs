@@ -73,7 +73,9 @@ console.log(`      Downloaded: ${tarball}`);
 console.log(`\n[2/4] Extracting tarball ...`);
 const extractDir = join(workDir, 'extracted');
 mkdirSync(extractDir, { recursive: true });
-execSync(`tar -xzf "${join(workDir, tarball)}" -C "${extractDir}"`, { stdio: 'inherit' });
+// Use relative paths + cwd: Windows tar (MSYS) treats "D:" in a path as a
+// remote host (rsh syntax), which breaks extraction with "Cannot connect to D".
+execSync(`tar -xzf "${tarball}" -C "extracted"`, { stdio: 'inherit', cwd: workDir });
 
 // npm tarballs always unpack to package/
 const pkgRoot = join(extractDir, 'package');
