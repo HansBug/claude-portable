@@ -2,13 +2,16 @@
 /**
  * Build a portable Claude Code archive for a specific platform.
  *
+ * Uses `npm pack` instead of `npm install` so we can fetch platform-specific
+ * packages (including musl) on any runner without hitting EBADPLATFORM.
+ *
  * Usage:
  *   node scripts/build-portable.mjs --version 2.1.116 --platform linux-x64 --output dist
  */
 import { execSync } from 'child_process';
 import {
   mkdirSync, copyFileSync, writeFileSync, chmodSync,
-  existsSync, readdirSync, statSync, readFileSync,
+  existsSync, readdirSync, statSync, rmSync,
 } from 'fs';
 import { join, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -16,43 +19,28 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
-// ---------------------------------------------------------------------------
-// CLI args
-// ---------------------------------------------------------------------------
-const argv = process.argv.slice(2);
+// ── CLI args ────────────────────────────────────────────────────────────────
 function getArg(name) {
-  const idx = argv.indexOf(`--${name}`);
-  return idx >= 0 ? argv[idx + 1] : null;
+  const idx = process.argv.indexOf(`--${name}`);
+  return idx >= 0 ? process.argv[idx + 1] : null;
 }
-
-const version = getArg('version');
-const platform = getArg('platform');
+const version   = getArg('version');
+const platform  = getArg('platform');
 const outputDir = getArg('output') ?? 'dist';
 
-if (!version) { console.error('--version required'); process.exit(1); }
+if (!version)  { console.error('--version required');  process.exit(1); }
 if (!platform) { console.error('--platform required'); process.exit(1); }
 
-// ---------------------------------------------------------------------------
-// Platform config
-// ---------------------------------------------------------------------------
+// ── Platform config ─────────────────────────────────────────────────────────
 const PLATFORMS = {
-  'linux-x64':        { directPkg: null,                                        isWindows: false },
-  'linux-arm64':      { directPkg: null,                                        isWindows: false },
-  'linux-x64-musl':   { directPkg: '@anthropic-ai/claude-code-linux-x64-musl',  isWindows: false },
-  'linux-arm64-musl': { directPkg: '@anthropic-ai/claude-code-linux-arm64-musl',isWindows: false },
-  'darwin-arm64':     { directPkg: null,                                        isWindows: false },
-  'darwin-x64':       { directPkg: null,                                        isWindows: false },
-  'win32-x64':        { directPkg: null,                                        isWindows: true  },
-  'win32-arm64':      { directPkg: null,                                        isWindows: true  },
-};
-
-const PLATFORM_PKG_NAMES = {
-  'linux-x64':    'claude-code-linux-x64',
-  'linux-arm64':  'claude-code-linux-arm64',
-  'darwin-arm64': 'claude-code-darwin-arm64',
-  'darwin-x64':   'claude-code-darwin-x64',
-  'win32-x64':    'claude-code-win32-x64',
-  'win32-arm64':  'claude-code-win32-arm64',
+  'linux-x64':        { pkg: 'claude-code-linux-x64',        isWindows: false },
+  'linux-arm64':      { pkg: 'claude-code-linux-arm64',      isWindows: false },
+  'linux-x64-musl':   { pkg: 'claude-code-linux-x64-musl',   isWindows: false },
+  'linux-arm64-musl': { pkg: 'claude-code-linux-arm64-musl', isWindows: false },
+  'darwin-arm64':     { pkg: 'claude-code-darwin-arm64',     isWindows: false },
+  'darwin-x64':       { pkg: 'claude-code-darwin-x64',       isWindows: false },
+  'win32-x64':        { pkg: 'claude-code-win32-x64',        isWindows: true  },
+  'win32-arm64':      { pkg: 'claude-code-win32-arm64',      isWindows: true  },
 };
 
 const cfg = PLATFORMS[platform];
@@ -62,105 +50,55 @@ const { isWindows } = cfg;
 const archiveExt = isWindows ? 'zip' : 'tar.gz';
 const bundleName = `claude-portable-${platform}-v${version}`;
 const workDir    = join(ROOT, '.work', platform);
-const installDir = join(workDir, 'install');
-const distDir    = join(ROOT, outputDir);
+const distDir    = resolve(ROOT, outputDir);
 const bundleDir  = join(distDir, bundleName);
 
-// ---------------------------------------------------------------------------
-// Install npm package
-// ---------------------------------------------------------------------------
-mkdirSync(installDir, { recursive: true });
+// Clean previous work
+if (existsSync(workDir)) rmSync(workDir, { recursive: true, force: true });
+if (existsSync(bundleDir)) rmSync(bundleDir, { recursive: true, force: true });
+mkdirSync(workDir, { recursive: true });
 mkdirSync(join(bundleDir, 'bin'), { recursive: true });
+mkdirSync(distDir, { recursive: true });
 
-let installTarget;
-if (cfg.directPkg) {
-  // musl: install the specific platform package directly
-  installTarget = `"${cfg.directPkg}@${version}"`;
-} else {
-  installTarget = `"@anthropic-ai/claude-code@${version}"`;
+// ── 1. Fetch tarball via `npm pack` (no platform check) ─────────────────────
+const fullPkg = `@anthropic-ai/${cfg.pkg}@${version}`;
+console.log(`\n[1/4] npm pack ${fullPkg} ...`);
+execSync(`npm pack "${fullPkg}" --pack-destination "${workDir}"`, { stdio: 'inherit' });
+
+const tarball = readdirSync(workDir).find(f => f.endsWith('.tgz'));
+if (!tarball) { console.error('No .tgz downloaded'); process.exit(1); }
+console.log(`      Downloaded: ${tarball}`);
+
+// ── 2. Extract tarball ──────────────────────────────────────────────────────
+console.log(`\n[2/4] Extracting tarball ...`);
+const extractDir = join(workDir, 'extracted');
+mkdirSync(extractDir, { recursive: true });
+execSync(`tar -xzf "${join(workDir, tarball)}" -C "${extractDir}"`, { stdio: 'inherit' });
+
+// npm tarballs always unpack to package/
+const pkgRoot = join(extractDir, 'package');
+
+// ── 3. Locate binary ────────────────────────────────────────────────────────
+const binCandidates = isWindows ? ['claude.exe', 'claude'] : ['claude', 'claude.exe'];
+let binaryPath = null;
+for (const name of binCandidates) {
+  const p = join(pkgRoot, name);
+  if (existsSync(p) && statSync(p).size > 50 * 1024 * 1024) {
+    binaryPath = p;
+    break;
+  }
 }
-
-console.log(`\n[1/4] Installing ${installTarget} ...`);
-execSync(
-  `npm install ${installTarget} --ignore-scripts --no-save --no-package-lock --prefix "${installDir}"`,
-  { stdio: 'inherit' }
-);
-
-// ---------------------------------------------------------------------------
-// Find the binary
-// ---------------------------------------------------------------------------
-// When installed with --ignore-scripts the postinstall that copies the binary
-// to bin/claude.exe is skipped, so bin/claude.exe is just an error stub.
-// The real binary lives at the root of the platform-specific package.
-function findBinary() {
-  const nm = join(installDir, 'node_modules', '@anthropic-ai');
-
-  // Only return path if it's a real large binary (>50 MB)
-  function realBin(p) {
-    if (!existsSync(p)) return null;
-    try { return statSync(p).size > 50 * 1024 * 1024 ? p : null; }
-    catch { return null; }
-  }
-
-  if (cfg.directPkg) {
-    // musl: package installed directly, binary at package root
-    const pkgDirName = cfg.directPkg.replace('@anthropic-ai/', '');
-    for (const name of ['claude', 'claude.exe']) {
-      const found = realBin(join(nm, pkgDirName, name));
-      if (found) return found;
-    }
-  } else {
-    // Standard: npm installs the platform sub-package at top level.
-    // Check top-level platform package first (reliable with --ignore-scripts).
-    const subPkgName = PLATFORM_PKG_NAMES[platform];
-    if (subPkgName) {
-      for (const name of ['claude', 'claude.exe']) {
-        const found = realBin(join(nm, subPkgName, name));
-        if (found) return found;
-        // Also try nested (older npm hoisting)
-        const found2 = realBin(join(nm, 'claude-code', 'node_modules', '@anthropic-ai', subPkgName, name));
-        if (found2) return found2;
-      }
-    }
-    // Fallback: bin/claude.exe if postinstall did run
-    const mainBin = realBin(join(nm, 'claude-code', 'bin', 'claude.exe'));
-    if (mainBin) return mainBin;
-  }
-
-  // Last resort: walk node_modules for any large file
-  console.warn('Binary not found at expected paths, scanning...');
-  function scan(dir, depth = 0) {
-    if (depth > 4) return null;
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      try {
-        const st = statSync(full);
-        if (st.isDirectory()) {
-          const found = scan(full, depth + 1);
-          if (found) return found;
-        } else if (st.size > 50 * 1024 * 1024 && !entry.endsWith('.json') && !entry.endsWith('.md')) {
-          return full;
-        }
-      } catch { /* ignore */ }
-    }
-    return null;
-  }
-  return scan(join(installDir, 'node_modules'));
+if (!binaryPath) {
+  console.error(`No binary >50 MB found in ${pkgRoot}`);
+  console.error(`Contents:`, readdirSync(pkgRoot));
+  process.exit(1);
 }
+console.log(`      Binary: ${binaryPath} (${(statSync(binaryPath).size / 1024 / 1024).toFixed(0)} MB)`);
 
-console.log('\n[2/4] Locating binary ...');
-const binaryPath = findBinary();
-if (!binaryPath) { console.error('ERROR: Could not find binary'); process.exit(1); }
-console.log(`      Found: ${binaryPath}`);
-
-// ---------------------------------------------------------------------------
-// Copy binary and create launchers
-// ---------------------------------------------------------------------------
-console.log('\n[3/4] Building bundle ...');
-
+// ── 4. Assemble bundle: copy binary, write launcher, write metadata ─────────
+console.log(`\n[3/4] Assembling bundle ...`);
 const realBinName = isWindows ? 'claude-real.exe' : 'claude-real';
 const destBinPath = join(bundleDir, 'bin', realBinName);
-
 copyFileSync(binaryPath, destBinPath);
 if (!isWindows) chmodSync(destBinPath, 0o755);
 
@@ -177,7 +115,7 @@ endlocal
 & "$PSScriptRoot\\bin\\claude-real.exe" @args
 `);
 } else {
-  // Resolve symlinks so the launcher works even when placed in PATH via symlink.
+  // Resolve symlinks so the launcher works when placed in PATH via symlink.
   writeFileSync(join(bundleDir, 'claude'),
 `#!/bin/sh
 SELF="$0"
@@ -198,15 +136,13 @@ writeFileSync(join(bundleDir, 'portable-metadata.json'), JSON.stringify({
   platform,
   builtAt: new Date().toISOString(),
   source: 'https://github.com/HansBug/claude-portable',
+  upstreamPackage: `@anthropic-ai/${cfg.pkg}@${version}`,
 }, null, 2) + '\n');
 
-// ---------------------------------------------------------------------------
-// Create archive
-// ---------------------------------------------------------------------------
+// ── 5. Archive ──────────────────────────────────────────────────────────────
 console.log(`\n[4/4] Creating ${archiveExt} archive ...`);
-mkdirSync(distDir, { recursive: true });
-
 const archivePath = join(distDir, `${bundleName}.${archiveExt}`);
+if (existsSync(archivePath)) rmSync(archivePath);
 
 if (isWindows) {
   execSync(
@@ -220,4 +156,5 @@ if (isWindows) {
   );
 }
 
-console.log(`\nDone: ${archivePath}`);
+const archiveSize = (statSync(archivePath).size / 1024 / 1024).toFixed(1);
+console.log(`\n✓ Built ${archivePath} (${archiveSize} MB)`);
