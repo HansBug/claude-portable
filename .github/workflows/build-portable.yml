@@ -254,6 +254,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+          ref: main                     # release event checks out the tag (detached HEAD) by default
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
