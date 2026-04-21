@@ -41,7 +41,7 @@ jobs:
             runner:   macos-15
             archive:  tar.gz
           - platform: darwin-x64
-            runner:   macos-13
+            runner:   macos-15-intel
             archive:  tar.gz
           - platform: win32-x64
             runner:   windows-2022
@@ -140,7 +140,7 @@ jobs:
             archive:  tar.gz
             mode:     native
           - platform: darwin-x64
-            runner:   macos-13
+            runner:   macos-15-intel
             archive:  tar.gz
             mode:     native
           - platform: win32-x64
