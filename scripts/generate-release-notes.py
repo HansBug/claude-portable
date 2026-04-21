@@ -1,91 +1,107 @@
 #!/usr/bin/env python3
-"""Generate release notes for claude-portable using the Claude API."""
-import argparse
-import json
-import sys
+"""Local helper: generate release notes by running the claude CLI.
 
-import anthropic
+In CI this logic lives directly in watch-upstream-release.yml.
+Use this script for local testing:
+
+  ANTHROPIC_API_KEY=sk-ant-... python3 scripts/generate-release-notes.py \\
+      --version 2.1.116 --output /tmp/notes.md
+"""
+import argparse
+import subprocess
+import sys
+import shutil
+import textwrap
 
 MODEL = "claude-opus-4-7"
 
-PROMPT_TEMPLATE = """\
-You are writing release notes for **claude-portable v{version}**, a project that \
-automatically repackages the official Anthropic Claude Code CLI \
-(`@anthropic-ai/claude-code`) into portable archives that can be deployed on \
-air-gapped or proxy-only servers without any installation.
 
-Here is the npm package metadata for the upstream release:
+def build_prompt(version: str) -> str:
+    return textwrap.dedent(f"""\
+        Write release notes for **claude-portable v{version}**.
 
-```json
-{npm_info}
-```
+        claude-portable automatically repackages the official Anthropic Claude Code CLI
+        (@anthropic-ai/claude-code) into portable, self-contained archives for
+        air-gapped or proxy-only servers that cannot run package managers or connect
+        to npm at deploy time.
 
-Write concise, professional release notes in Markdown. Follow this structure exactly:
+        Step 1 — Use WebFetch to read the upstream Claude Code release notes at:
+        https://github.com/anthropics/claude-code/releases/tag/v{version}
 
-## Claude Code v{version} — Portable Release
+        Step 2 — Write the following Markdown document:
 
-[One sentence: this is the portable packaging of Claude Code v{version}, noting \
-the 8 supported platforms.]
+        ### Claude Code v{version} — Portable Release
 
-### Supported Platforms
+        [One sentence: portable packaging of Claude Code v{version} for 8 platforms,
+        designed for air-gapped / proxy-only deployment.]
 
-| Platform | Archive | Notes |
-|----------|---------|-------|
-| Linux x86-64 (glibc) | `.tar.gz` | Ubuntu 20.04+, Debian 10+, CentOS 7+ |
-| Linux ARM64 (glibc) | `.tar.gz` | Ubuntu 20.04 ARM+ |
-| Linux x86-64 (musl) | `.tar.gz` | Alpine 3.19+ |
-| Linux ARM64 (musl) | `.tar.gz` | Alpine ARM |
-| macOS Apple Silicon | `.tar.gz` | macOS 13+, M1/M2/M3 |
-| macOS Intel | `.tar.gz` | macOS 13+, Intel |
-| Windows x86-64 | `.zip` | Windows 10+ |
-| Windows ARM64 | `.zip` | Windows 11 ARM |
+        ### What's New in Claude Code v{version}
 
-### Quick Start
+        [Summarize the key changes you read from the upstream release page. Be specific —
+        name the features, commands, and bug fixes. Group into 3–5 bullet points.
+        Do NOT copy verbatim; distill the highlights.]
 
-```bash
-# Linux x86-64 example
-tar xzf claude-portable-linux-x64-v{version}.tar.gz
-export ANTHROPIC_API_KEY=sk-ant-...
-export HTTPS_PROXY=http://your-proxy:8080   # if behind a proxy
-./claude-portable-linux-x64-v{version}/claude --version
-```
+        ### Supported Platforms
 
-### Notes
+        | Platform | Archive | Notes |
+        |----------|---------|-------|
+        | Linux x86-64 (glibc) | .tar.gz | Ubuntu 20.04+, Debian 10+, CentOS 7+ |
+        | Linux ARM64 (glibc) | .tar.gz | Ubuntu 20.04 ARM+ |
+        | Linux x86-64 (musl) | .tar.gz | Alpine 3.19+ |
+        | Linux ARM64 (musl) | .tar.gz | Alpine ARM |
+        | macOS Apple Silicon | .tar.gz | macOS 13+, M1/M2/M3 |
+        | macOS Intel | .tar.gz | macOS 13+, Intel |
+        | Windows x86-64 | .zip | Windows 10+ |
+        | Windows ARM64 | .zip | Windows 11 ARM |
 
-[2–4 bullet points. Be factual. Mention: DISABLE_AUTOUPDATER is set by the \
-launcher; no Node.js or package manager needed at runtime; proxy env vars \
-(HTTPS_PROXY, HTTP_PROXY, NODE_EXTRA_CA_CERTS) are supported; ANTHROPIC_API_KEY \
-must be set by the user.]
+        ### Quick Start
 
-Keep the entire response under 400 words. Do not add any preamble or closing remarks.\
-"""
+        ```bash
+        tar xzf claude-portable-linux-x64-v{version}.tar.gz
+        export ANTHROPIC_API_KEY=sk-ant-...
+        export HTTPS_PROXY=http://your-proxy:8080   # if behind a proxy
+        ./claude-portable-linux-x64-v{version}/claude --version
+        ```
+
+        ### Portable Packaging Notes
+
+        - The launcher script injects `DISABLE_AUTOUPDATER=1` automatically — the binary never attempts self-update.
+        - No Node.js, npm, or any package manager is needed on the target machine at runtime.
+        - Standard proxy environment variables (`HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY`, `NODE_EXTRA_CA_CERTS`) are forwarded transparently.
+
+        Keep the entire document under 550 words. Output ONLY the Markdown release notes.
+        Do NOT include any meta-commentary, notes about the generation process, observations
+        about tool output, or warnings. The output is used verbatim as a GitHub release body.
+    """)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", required=True)
-    parser.add_argument("--npm-info", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
-    with open(args.npm_info) as f:
-        raw = json.load(f)
+    claude_bin = shutil.which("claude")
+    if not claude_bin:
+        print("ERROR: 'claude' not found in PATH. Install with: npm install -g @anthropic-ai/claude-code",
+              file=sys.stderr)
+        sys.exit(1)
 
-    # Trim to avoid huge prompts
-    slim = {k: raw.get(k) for k in ("name", "version", "description", "keywords", "homepage")}
-    npm_info_str = json.dumps(slim, indent=2)
+    prompt = build_prompt(args.version)
 
-    client = anthropic.Anthropic()
-    prompt = PROMPT_TEMPLATE.format(version=args.version, npm_info=npm_info_str)
-
-    print(f"Generating release notes with {MODEL} ...")
-    message = client.messages.create(
-        model=MODEL,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
+    print(f"Running claude --model {MODEL} --allowedTools WebFetch ...")
+    result = subprocess.run(
+        [claude_bin, "--model", MODEL, "--allowedTools", "WebFetch",
+         "--output-format", "text", "-p", prompt],
+        capture_output=True, text=True,
     )
 
-    content = message.content[0].text.strip()
+    if result.returncode != 0:
+        print(f"ERROR: claude exited with {result.returncode}", file=sys.stderr)
+        print(result.stderr, file=sys.stderr)
+        sys.exit(1)
+
+    content = result.stdout.strip()
     footer = f"\n\n---\n*Generated by [Claude Code](https://claude.ai/code) ({MODEL})*"
     output = content + footer
 
@@ -93,9 +109,8 @@ def main():
         f.write(output)
 
     print(f"Written to {args.output}")
-    print("--- preview ---")
+    print("--- preview (first 600 chars) ---")
     print(output[:600])
-    print("...")
 
 
 if __name__ == "__main__":
