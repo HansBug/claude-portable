@@ -115,42 +115,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: linux-x64
-            runner:   ubuntu-22.04
-            archive:  tar.gz
-            mode:     docker
-            docker_image: ubuntu:22.04
-          - platform: linux-arm64
-            runner:   ubuntu-22.04-arm
-            archive:  tar.gz
-            mode:     docker
-            docker_image: ubuntu:22.04
-          - platform: linux-x64-musl
-            runner:   ubuntu-22.04
-            archive:  tar.gz
-            mode:     docker
-            docker_image: alpine:3.19
-          - platform: linux-arm64-musl
-            runner:   ubuntu-22.04-arm
-            archive:  tar.gz
-            mode:     docker
-            docker_image: alpine:3.19
-          - platform: darwin-arm64
-            runner:   macos-15
-            archive:  tar.gz
-            mode:     native
-          - platform: darwin-x64
-            runner:   macos-15-intel
-            archive:  tar.gz
-            mode:     native
-          - platform: win32-x64
-            runner:   windows-2022
-            archive:  zip
-            mode:     windows
-          - platform: win32-arm64
-            runner:   windows-11-arm
-            archive:  zip
-            mode:     windows
+          # glibc Linux and macOS run natively in a fresh workdir.
+          - { platform: linux-x64,         runner: ubuntu-22.04,     archive: tar.gz, mode: native  }
+          - { platform: linux-arm64,       runner: ubuntu-22.04-arm, archive: tar.gz, mode: native  }
+          # musl binaries cannot run on a glibc host; use Alpine Docker.
+          - { platform: linux-x64-musl,    runner: ubuntu-22.04,     archive: tar.gz, mode: alpine  }
+          - { platform: linux-arm64-musl,  runner: ubuntu-22.04-arm, archive: tar.gz, mode: alpine  }
+          - { platform: darwin-arm64,      runner: macos-15,         archive: tar.gz, mode: native  }
+          - { platform: darwin-x64,        runner: macos-15-intel,   archive: tar.gz, mode: native  }
+          - { platform: win32-x64,         runner: windows-2022,     archive: zip,    mode: windows }
+          - { platform: win32-arm64,       runner: windows-11-arm,   archive: zip,    mode: windows }
 
     steps:
       - name: Download artifact
@@ -174,44 +148,8 @@ jobs:
           fi
           echo "✓ Checksum verified"
 
-      # ── Linux: extract in a CLEAN Docker container ─────────────────────────
-      - name: Verify — Linux (Docker clean env)
-        if: matrix.mode == 'docker'
-        shell: bash
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          DOCKER_IMAGE: ${{ matrix.docker_image }}
-        run: |
-          ARCHIVE=$(ls artifact/claude-portable-${{ matrix.platform }}-*.tar.gz)
-          BASENAME=$(basename "$ARCHIVE" .tar.gz)
-          ABS_ARTIFACT=$(realpath artifact)
-
-          # Install deps only for Alpine (musl); Ubuntu is already complete.
-          if [[ "$DOCKER_IMAGE" == alpine* ]]; then
-            SETUP='apk add --no-cache libgcc libstdc++ > /dev/null 2>&1'
-          else
-            SETUP='true'
-          fi
-
-          echo "=== Test 1: extract + --version in clean $DOCKER_IMAGE ==="
-          docker run --rm \
-            -v "$ABS_ARTIFACT:/in:ro" \
-            -e DISABLE_AUTOUPDATER=1 \
-            "$DOCKER_IMAGE" \
-            sh -c "$SETUP && cd /tmp && cp /in/$(basename \"$ARCHIVE\") . && tar xzf $(basename \"$ARCHIVE\") && ./$BASENAME/claude --version"
-
-          echo ""
-          echo "=== Test 2: API call with real key ==="
-          docker run --rm \
-            -v "$ABS_ARTIFACT:/in:ro" \
-            -e DISABLE_AUTOUPDATER=1 \
-            -e ANTHROPIC_API_KEY \
-            "$DOCKER_IMAGE" \
-            sh -c "$SETUP && cd /tmp && cp /in/$(basename \"$ARCHIVE\") . && tar xzf $(basename \"$ARCHIVE\") && ./$BASENAME/claude --model haiku -p 'Reply with exactly the text: SMOKE_TEST_OK' 2>&1 | tee /tmp/out.txt && grep -q SMOKE_TEST_OK /tmp/out.txt"
-          echo "✓ API test passed"
-
-      # ── macOS: extract in a FRESH directory on the runner ──────────────────
-      - name: Verify — macOS (fresh workdir)
+      # ── Native Linux / macOS: extract in a fresh workdir on the runner ─────
+      - name: Verify — native (fresh workdir)
         if: matrix.mode == 'native'
         shell: bash
         env:
@@ -219,20 +157,57 @@ jobs:
           DISABLE_AUTOUPDATER: '1'
         run: |
           ARCHIVE=$(ls artifact/claude-portable-${{ matrix.platform }}-*.tar.gz)
-          BASENAME=$(basename "$ARCHIVE" .tar.gz)
+          FILENAME=$(basename "$ARCHIVE")
+          BASENAME="${FILENAME%.tar.gz}"
 
-          CLEAN_DIR="$RUNNER_TEMP/verify-clean"
+          CLEAN_DIR="${RUNNER_TEMP:-/tmp}/verify-clean"
           rm -rf "$CLEAN_DIR"
           mkdir -p "$CLEAN_DIR"
           cp "$ARCHIVE" "$CLEAN_DIR/"
           cd "$CLEAN_DIR"
 
-          tar xzf "$(basename "$ARCHIVE")"
+          tar xzf "$FILENAME"
+
+          echo "=== Test 1: --version ==="
           "./$BASENAME/claude" --version
           echo "✓ --version passed"
 
+          echo "=== Test 2: API call ==="
           "./$BASENAME/claude" --model haiku -p "Reply with exactly the text: SMOKE_TEST_OK" 2>&1 | tee out.txt
           grep -q SMOKE_TEST_OK out.txt
+          echo "✓ API test passed"
+
+      # ── musl Linux: extract in a CLEAN Alpine container ────────────────────
+      - name: Verify — musl (Alpine Docker)
+        if: matrix.mode == 'alpine'
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ARCHIVE=$(ls artifact/claude-portable-${{ matrix.platform }}-*.tar.gz)
+          FILENAME=$(basename "$ARCHIVE")
+          BASENAME="${FILENAME%.tar.gz}"
+          ABS_ARTIFACT=$(realpath artifact)
+
+          echo "=== Test 1: extract + --version in clean alpine:3.19 ==="
+          docker run --rm \
+            -v "$ABS_ARTIFACT:/in:ro" \
+            -e DISABLE_AUTOUPDATER=1 \
+            -e FILENAME="$FILENAME" \
+            -e BASENAME="$BASENAME" \
+            alpine:3.19 \
+            sh -c 'apk add --no-cache libgcc libstdc++ > /dev/null 2>&1 && cd /tmp && cp "/in/$FILENAME" . && tar xzf "$FILENAME" && "./$BASENAME/claude" --version'
+
+          echo ""
+          echo "=== Test 2: API call with real key ==="
+          docker run --rm \
+            -v "$ABS_ARTIFACT:/in:ro" \
+            -e DISABLE_AUTOUPDATER=1 \
+            -e ANTHROPIC_API_KEY \
+            -e FILENAME="$FILENAME" \
+            -e BASENAME="$BASENAME" \
+            alpine:3.19 \
+            sh -c 'apk add --no-cache libgcc libstdc++ > /dev/null 2>&1 && cd /tmp && cp "/in/$FILENAME" . && tar xzf "$FILENAME" && "./$BASENAME/claude" --model haiku -p "Reply with exactly the text: SMOKE_TEST_OK" 2>&1 | tee out.txt && grep -q SMOKE_TEST_OK out.txt'
           echo "✓ API test passed"
 
       # ── Windows: extract in a FRESH directory on the runner ────────────────
