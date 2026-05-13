@@ -55,6 +55,7 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           DISABLE_AUTOUPDATER: '1'
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -71,6 +72,12 @@ jobs:
             echo "ANTHROPIC_API_KEY: <set, length=${#ANTHROPIC_API_KEY}>"
           else
             echo "ANTHROPIC_API_KEY: <UNSET>"
+          fi
+          if [ -n "${ANTHROPIC_BASE_URL:-}" ]; then
+            # Host-only, no path or token in query
+            echo "ANTHROPIC_BASE_URL host: $(echo "$ANTHROPIC_BASE_URL" | sed -E 's|https?://([^/]+).*|\1|')"
+          else
+            echo "ANTHROPIC_BASE_URL: <UNSET — using default api.anthropic.com>"
           fi
           echo "Working dir:   $(pwd)"
           echo "Target ver:    $VERSION"
