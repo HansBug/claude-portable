@@ -6,20 +6,20 @@
 
 [Claude Code](https://claude.ai/code) 是 Anthropic 官方 CLI 工具。本仓库自动将官方二进制文件重新打包为自包含归档，适合在**无网络或仅代理上网的服务器**上部署，无需包管理器，无需联网安装。
 
-**当前版本：[v2.1.162](https://github.com/HansBug/claude-portable/releases/tag/v2.1.162)** · [所有版本](https://github.com/HansBug/claude-portable/releases)
+**当前版本：[v2.1.163](https://github.com/HansBug/claude-portable/releases/tag/v2.1.163)** · [所有版本](https://github.com/HansBug/claude-portable/releases)
 
 ## 下载
 
 | 平台 | 文件 | SHA256 |
 |------|------|--------|
-| Linux x86-64 (glibc)<br><small>Ubuntu 20.04+, Debian 10+, CentOS 7+</small> | [claude-portable-linux-x64-v2.1.162.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-x64-v2.1.162.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-x64-v2.1.162.tar.gz.sha256) |
-| Linux ARM64 (glibc)<br><small>Ubuntu 20.04 ARM+</small> | [claude-portable-linux-arm64-v2.1.162.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-arm64-v2.1.162.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-arm64-v2.1.162.tar.gz.sha256) |
-| Linux x86-64 (musl)<br><small>Alpine 3.19+</small> | [claude-portable-linux-x64-musl-v2.1.162.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-x64-musl-v2.1.162.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-x64-musl-v2.1.162.tar.gz.sha256) |
-| Linux ARM64 (musl)<br><small>Alpine ARM</small> | [claude-portable-linux-arm64-musl-v2.1.162.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-arm64-musl-v2.1.162.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-arm64-musl-v2.1.162.tar.gz.sha256) |
-| macOS Apple Silicon<br><small>M1/M2/M3, macOS 13+</small> | [claude-portable-darwin-arm64-v2.1.162.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-darwin-arm64-v2.1.162.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-darwin-arm64-v2.1.162.tar.gz.sha256) |
-| macOS Intel<br><small>Intel, macOS 13+</small> | [claude-portable-darwin-x64-v2.1.162.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-darwin-x64-v2.1.162.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-darwin-x64-v2.1.162.tar.gz.sha256) |
-| Windows x86-64<br><small>Windows 10+</small> | [claude-portable-win32-x64-v2.1.162.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-win32-x64-v2.1.162.zip) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-win32-x64-v2.1.162.zip.sha256) |
-| Windows ARM64<br><small>Windows 11 ARM</small> | [claude-portable-win32-arm64-v2.1.162.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-win32-arm64-v2.1.162.zip) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-win32-arm64-v2.1.162.zip.sha256) |
+| Linux x86-64 (glibc)<br><small>Ubuntu 20.04+, Debian 10+, CentOS 7+</small> | [claude-portable-linux-x64-v2.1.163.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-x64-v2.1.163.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-x64-v2.1.163.tar.gz.sha256) |
+| Linux ARM64 (glibc)<br><small>Ubuntu 20.04 ARM+</small> | [claude-portable-linux-arm64-v2.1.163.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-arm64-v2.1.163.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-arm64-v2.1.163.tar.gz.sha256) |
+| Linux x86-64 (musl)<br><small>Alpine 3.19+</small> | [claude-portable-linux-x64-musl-v2.1.163.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-x64-musl-v2.1.163.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-x64-musl-v2.1.163.tar.gz.sha256) |
+| Linux ARM64 (musl)<br><small>Alpine ARM</small> | [claude-portable-linux-arm64-musl-v2.1.163.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-arm64-musl-v2.1.163.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-arm64-musl-v2.1.163.tar.gz.sha256) |
+| macOS Apple Silicon<br><small>M1/M2/M3, macOS 13+</small> | [claude-portable-darwin-arm64-v2.1.163.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-darwin-arm64-v2.1.163.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-darwin-arm64-v2.1.163.tar.gz.sha256) |
+| macOS Intel<br><small>Intel, macOS 13+</small> | [claude-portable-darwin-x64-v2.1.163.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-darwin-x64-v2.1.163.tar.gz) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-darwin-x64-v2.1.163.tar.gz.sha256) |
+| Windows x86-64<br><small>Windows 10+</small> | [claude-portable-win32-x64-v2.1.163.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-win32-x64-v2.1.163.zip) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-win32-x64-v2.1.163.zip.sha256) |
+| Windows ARM64<br><small>Windows 11 ARM</small> | [claude-portable-win32-arm64-v2.1.163.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-win32-arm64-v2.1.163.zip) | [校验值](https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-win32-arm64-v2.1.163.zip.sha256) |
 
 
 ## 快速安装
@@ -28,9 +28,9 @@
 
 ```bash
 # 以 Linux x86-64 (glibc) 为例，按实际平台替换文件名
-curl -fSLO https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-linux-x64-v2.1.162.tar.gz
-tar xzf claude-portable-linux-x64-v2.1.162.tar.gz
-cd claude-portable-linux-x64-v2.1.162   # 去掉 .tar.gz 后缀
+curl -fSLO https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-linux-x64-v2.1.163.tar.gz
+tar xzf claude-portable-linux-x64-v2.1.163.tar.gz
+cd claude-portable-linux-x64-v2.1.163   # 去掉 .tar.gz 后缀
 ./claude --version
 ```
 
@@ -47,9 +47,9 @@ ln -sf "$PWD/claude" ~/.local/bin/claude
 ### Windows — PowerShell
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/HansBug/claude-portable/releases/download/v2.1.162/claude-portable-win32-x64-v2.1.162.zip" -OutFile "claude-portable-win32-x64-v2.1.162.zip"
-Expand-Archive "claude-portable-win32-x64-v2.1.162.zip" .
-.\claude-portable-win32-x64-v2.1.162\claude.cmd --version
+Invoke-WebRequest -Uri "https://github.com/HansBug/claude-portable/releases/download/v2.1.163/claude-portable-win32-x64-v2.1.163.zip" -OutFile "claude-portable-win32-x64-v2.1.163.zip"
+Expand-Archive "claude-portable-win32-x64-v2.1.163.zip" .
+.\claude-portable-win32-x64-v2.1.163\claude.cmd --version
 ```
 
 ## 配置
@@ -103,7 +103,7 @@ export ANTHROPIC_BASE_URL=https://your-internal-gateway/
 ## 目录结构
 
 ```
-claude-portable-<platform>-v2.1.162/
+claude-portable-<platform>-v2.1.163/
 ├── claude          ← launcher（注入 DISABLE_AUTOUPDATER=1，然后 exec 真实二进制）
 ├── bin/
 │   └── claude-real ← Anthropic 官方二进制（~227 MB，自包含）
