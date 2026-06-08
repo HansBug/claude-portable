@@ -6,20 +6,20 @@
 
 [Claude Code](https://claude.ai/code) is Anthropic's official CLI. This repository automatically repackages the official binary into self-contained archives for deployment on **air-gapped or proxy-only servers** where package managers and internet access are unavailable.
 
-**Current release: [v2.1.168](https://github.com/HansBug/claude-portable/releases/tag/v2.1.168)** · [All releases](https://github.com/HansBug/claude-portable/releases)
+**Current release: [v2.1.169](https://github.com/HansBug/claude-portable/releases/tag/v2.1.169)** · [All releases](https://github.com/HansBug/claude-portable/releases)
 
 ## Download
 
 | Platform | File | SHA256 |
 |----------|------|--------|
-| Linux x86-64 (glibc)<br><small>Ubuntu 20.04+, Debian 10+, CentOS 7+</small> | [claude-portable-linux-x64-v2.1.168.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-x64-v2.1.168.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-x64-v2.1.168.tar.gz.sha256) |
-| Linux ARM64 (glibc)<br><small>Ubuntu 20.04 ARM+</small> | [claude-portable-linux-arm64-v2.1.168.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-arm64-v2.1.168.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-arm64-v2.1.168.tar.gz.sha256) |
-| Linux x86-64 (musl)<br><small>Alpine 3.19+</small> | [claude-portable-linux-x64-musl-v2.1.168.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-x64-musl-v2.1.168.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-x64-musl-v2.1.168.tar.gz.sha256) |
-| Linux ARM64 (musl)<br><small>Alpine ARM</small> | [claude-portable-linux-arm64-musl-v2.1.168.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-arm64-musl-v2.1.168.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-arm64-musl-v2.1.168.tar.gz.sha256) |
-| macOS Apple Silicon<br><small>M1/M2/M3, macOS 13+</small> | [claude-portable-darwin-arm64-v2.1.168.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-darwin-arm64-v2.1.168.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-darwin-arm64-v2.1.168.tar.gz.sha256) |
-| macOS Intel<br><small>Intel, macOS 13+</small> | [claude-portable-darwin-x64-v2.1.168.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-darwin-x64-v2.1.168.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-darwin-x64-v2.1.168.tar.gz.sha256) |
-| Windows x86-64<br><small>Windows 10+</small> | [claude-portable-win32-x64-v2.1.168.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-win32-x64-v2.1.168.zip) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-win32-x64-v2.1.168.zip.sha256) |
-| Windows ARM64<br><small>Windows 11 ARM</small> | [claude-portable-win32-arm64-v2.1.168.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-win32-arm64-v2.1.168.zip) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-win32-arm64-v2.1.168.zip.sha256) |
+| Linux x86-64 (glibc)<br><small>Ubuntu 20.04+, Debian 10+, CentOS 7+</small> | [claude-portable-linux-x64-v2.1.169.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-x64-v2.1.169.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-x64-v2.1.169.tar.gz.sha256) |
+| Linux ARM64 (glibc)<br><small>Ubuntu 20.04 ARM+</small> | [claude-portable-linux-arm64-v2.1.169.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-arm64-v2.1.169.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-arm64-v2.1.169.tar.gz.sha256) |
+| Linux x86-64 (musl)<br><small>Alpine 3.19+</small> | [claude-portable-linux-x64-musl-v2.1.169.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-x64-musl-v2.1.169.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-x64-musl-v2.1.169.tar.gz.sha256) |
+| Linux ARM64 (musl)<br><small>Alpine ARM</small> | [claude-portable-linux-arm64-musl-v2.1.169.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-arm64-musl-v2.1.169.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-arm64-musl-v2.1.169.tar.gz.sha256) |
+| macOS Apple Silicon<br><small>M1/M2/M3, macOS 13+</small> | [claude-portable-darwin-arm64-v2.1.169.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-darwin-arm64-v2.1.169.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-darwin-arm64-v2.1.169.tar.gz.sha256) |
+| macOS Intel<br><small>Intel, macOS 13+</small> | [claude-portable-darwin-x64-v2.1.169.tar.gz](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-darwin-x64-v2.1.169.tar.gz) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-darwin-x64-v2.1.169.tar.gz.sha256) |
+| Windows x86-64<br><small>Windows 10+</small> | [claude-portable-win32-x64-v2.1.169.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-win32-x64-v2.1.169.zip) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-win32-x64-v2.1.169.zip.sha256) |
+| Windows ARM64<br><small>Windows 11 ARM</small> | [claude-portable-win32-arm64-v2.1.169.zip](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-win32-arm64-v2.1.169.zip) | [checksum](https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-win32-arm64-v2.1.169.zip.sha256) |
 
 
 ## Quick Install
@@ -28,9 +28,9 @@
 
 ```bash
 # Linux x86-64 (glibc) — change the filename for your platform
-curl -fSLO https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-linux-x64-v2.1.168.tar.gz
-tar xzf claude-portable-linux-x64-v2.1.168.tar.gz
-cd claude-portable-linux-x64-v2.1.168   # strip .tar.gz
+curl -fSLO https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-linux-x64-v2.1.169.tar.gz
+tar xzf claude-portable-linux-x64-v2.1.169.tar.gz
+cd claude-portable-linux-x64-v2.1.169   # strip .tar.gz
 ./claude --version
 ```
 
@@ -46,9 +46,9 @@ ln -sf "$PWD/claude" ~/.local/bin/claude
 ### Windows — PowerShell
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/HansBug/claude-portable/releases/download/v2.1.168/claude-portable-win32-x64-v2.1.168.zip" -OutFile "claude-portable-win32-x64-v2.1.168.zip"
-Expand-Archive "claude-portable-win32-x64-v2.1.168.zip" .
-.\claude-portable-win32-x64-v2.1.168\claude.cmd --version
+Invoke-WebRequest -Uri "https://github.com/HansBug/claude-portable/releases/download/v2.1.169/claude-portable-win32-x64-v2.1.169.zip" -OutFile "claude-portable-win32-x64-v2.1.169.zip"
+Expand-Archive "claude-portable-win32-x64-v2.1.169.zip" .
+.\claude-portable-win32-x64-v2.1.169\claude.cmd --version
 ```
 
 ## Configuration
@@ -102,7 +102,7 @@ export ANTHROPIC_BASE_URL=https://your-internal-gateway/
 ## Bundle Layout
 
 ```
-claude-portable-<platform>-v2.1.168/
+claude-portable-<platform>-v2.1.169/
 ├── claude          ← launcher (sets DISABLE_AUTOUPDATER=1, then execs the real binary)
 ├── bin/
 │   └── claude-real ← the official Anthropic binary (~227 MB, self-contained)
